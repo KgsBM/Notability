@@ -5,12 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Notability Entdecker-Rallye - 90 Minuten</title>
     <style>
+        /* Grundlegendes Layout */
         body, html {
             margin: 0; padding: 0; width: 100vw; height: 100vh;
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             overflow: hidden; background-color: #0B0C10; color: #C5C6C7;
         }
 
+        /* Zwang zum Querformat (Orientation Lock) */
+        #orientation-warning {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #0B0C10; color: #66FCF1; z-index: 9999;
+            text-align: center; flex-direction: column; justify-content: center; align-items: center;
+        }
+        #orientation-warning h1 { font-size: 3rem; margin-bottom: 10px; }
+        #orientation-warning p { font-size: 1.5rem; }
+        
+        @media (orientation: portrait) {
+            #orientation-warning { display: flex; }
+            #app-container { display: none; }
+        }
+
+        #app-container { width: 100%; height: 100%; position: relative; }
+
+        /* Sternenhintergrund */
         .map-container {
             position: relative; width: 100%; height: 100%;
             background-image: 
@@ -19,29 +37,35 @@
                 radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 4px);
             background-size: 550px 550px, 350px 350px, 250px 250px;
             background-position: 0 0, 40px 60px, 130px 270px;
+            filter: blur(5px); /* Start-Blur, bis Vollbild gestartet wird */
+            transition: filter 0.5s ease;
         }
 
         .header {
-            position: absolute; top: 15px; width: 100%; text-align: center;
-            font-size: clamp(1.2rem, 2.5vw, 2rem); color: #66FCF1;
+            position: absolute; top: 3vmin; width: 100%; text-align: center;
+            font-size: clamp(1.5rem, 4vmin, 2.5rem); color: #66FCF1;
             text-shadow: 0 0 10px rgba(102, 252, 241, 0.5); pointer-events: none; z-index: 5;
         }
 
+        /* Responsive Stationen via vmin (skaliert perfekt nach Bildschirmgröße) */
         .station {
-            position: absolute; width: 10vh; height: 10vh;
-            min-width: 60px; min-height: 60px; max-width: 90px; max-height: 90px;
+            position: absolute; width: 12vmin; height: 12vmin;
+            min-width: 60px; min-height: 60px; max-width: 100px; max-height: 100px;
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 2rem; box-shadow: 0 0 15px rgba(255, 255, 255, 0.2); z-index: 2;
+            font-size: clamp(1.5rem, 4vmin, 2.5rem); box-shadow: 0 0 15px rgba(255, 255, 255, 0.2); z-index: 2;
             cursor: pointer; transition: transform 0.3s, box-shadow 0.3s;
             transform: translate(-50%, -50%);
+            pointer-events: none; /* Blockiert Klicks vor dem Start */
         }
+
+        .station.active-clicks { pointer-events: auto; } /* Aktiviert Klicks nach Start */
 
         .station:hover {
             transform: translate(-50%, -50%) scale(1.15);
             box-shadow: 0 0 25px rgba(102, 252, 241, 0.8);
         }
 
-        /* Route */
+        /* Route (In relativen % Koordinaten) */
         .station-1 { top: 75%; left: 15%; background: radial-gradient(circle, #45A29E, #0B0C10); }
         .station-2 { top: 45%; left: 25%; background: radial-gradient(circle, #F2A900, #4A3300); }
         .station-3 { top: 20%; left: 45%; background: radial-gradient(circle, #E10600, #4D0200); }
@@ -50,19 +74,35 @@
         .station-6 { top: 25%; left: 85%; background: radial-gradient(circle, #9b59b6, #361b42); }
 
         .station-label {
-            position: absolute; top: 110%; width: 150px; text-align: center;
-            font-size: 0.9rem; font-weight: bold; color: white;
+            position: absolute; top: 110%; width: 18vmin; text-align: center;
+            font-size: clamp(0.8rem, 2vmin, 1.2rem); font-weight: bold; color: white;
             text-shadow: 2px 2px 4px #000; pointer-events: none;
         }
 
         #rocket {
-            position: absolute; top: 90%; left: 5%; font-size: 3rem;
+            position: absolute; top: 90%; left: 5%; font-size: clamp(2rem, 5vmin, 4rem);
             transition: top 1s ease-in-out, left 1s ease-in-out, transform 0.3s;
             z-index: 10; transform: translate(-50%, -50%) rotate(45deg); 
             filter: drop-shadow(0 0 10px rgba(255,255,255,0.5)); pointer-events: none;
         }
         .flying { animation: shake 0.2s infinite alternate; }
         @keyframes shake { from { margin-top: -3px; } to { margin-top: 3px; } }
+
+        /* Buttons & Initialer Start-Screen */
+        .btn {
+            background: #66FCF1; color: #0B0C10; border: none; padding: 15px 30px;
+            font-size: clamp(1rem, 2.5vmin, 1.5rem); font-weight: bold; border-radius: 50px; cursor: pointer;
+            transition: all 0.2s; box-shadow: 0 5px 20px rgba(102, 252, 241, 0.4);
+        }
+        .btn:hover { background: #45A29E; color: white; transform: scale(1.05); }
+        .btn-secondary { background: #C5C6C7; box-shadow: none; }
+        .btn-secondary:hover { background: #a5a6a7; }
+
+        #start-overlay {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 50; background: rgba(0,0,0,0.6);
+        }
 
         /* Modal Layout */
         .modal-overlay {
@@ -74,80 +114,78 @@
         .modal-overlay.active { visibility: visible; opacity: 1; }
 
         .modal-content {
-            background: #1F2833; padding: 20px; border-radius: 12px;
-            width: 95%; max-width: 900px; max-height: 95vh; overflow-y: auto;
+            background: #1F2833; padding: 3vmin; border-radius: 12px;
+            width: 90vw; max-width: 900px; max-height: 90vh; overflow-y: auto;
             box-shadow: 0 10px 30px rgba(0,0,0,0.9); border: 2px solid #66FCF1;
         }
 
-        .modal-content h2 { margin-top: 0; color: #66FCF1; font-size: 1.5rem; margin-bottom: 10px; }
-        .task-list { background: rgba(255,255,255,0.05); padding: 10px 20px; border-radius: 8px; margin-bottom: 15px; }
-        .task-list li { margin-bottom: 8px; font-size: 1rem; line-height: 1.3; }
+        .modal-content h2 { margin-top: 0; color: #66FCF1; font-size: clamp(1.2rem, 3vmin, 1.8rem); margin-bottom: 2vmin; }
+        .task-list { background: rgba(255,255,255,0.05); padding: 2vmin 3vmin; border-radius: 8px; margin-bottom: 2vmin; }
+        .task-list li { margin-bottom: 1vmin; font-size: clamp(0.9rem, 2vmin, 1.2rem); line-height: 1.4; }
 
         .video-container {
             position: relative; padding-bottom: 40%; height: 0; overflow: hidden;
-            border-radius: 8px; margin-bottom: 15px; background: #000; border: 1px solid #45A29E;
+            border-radius: 8px; margin-bottom: 2vmin; background: #000; border: 1px solid #45A29E;
         }
         .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
 
-        .button-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
-        .btn {
-            background: #66FCF1; color: #0B0C10; border: none; padding: 10px 20px;
-            font-size: 1rem; font-weight: bold; border-radius: 50px; cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn:hover { background: #45A29E; color: white; transform: scale(1.05); }
-        .btn-secondary { background: #C5C6C7; }
-        
-        #start-btn { position: absolute; bottom: 5%; left: 50%; transform: translateX(-50%); z-index: 50; }
+        .button-group { display: flex; gap: 2vmin; justify-content: center; flex-wrap: wrap; margin-bottom: 1vmin; }
 
-        /* Fake Screenshot Style via CSS & SVG */
+        /* Screenshot Ergebnisse */
         .result-box {
-            display: none; background: #2b3036; color: white; padding: 15px;
-            border-radius: 8px; margin-top: 15px; font-weight: bold; text-align: center;
-            border: 1px dashed #45A29E;
+            display: none; background: #2b3036; color: white; padding: 2vmin;
+            border-radius: 8px; margin-top: 2vmin; font-weight: bold; text-align: center; border: 1px dashed #45A29E;
         }
         .fake-screenshot {
             display: block; width: 100%; max-width: 500px; margin: 10px auto;
-            border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            background: #ffffff; 
+            border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); background: #ffffff; 
         }
     </style>
 </head>
 <body>
 
-    <div class="map-container">
-        <div class="header">🚀 Notability Entdecker-Rallye (90 Min)</div>
+    <!-- Querformat Hinweis -->
+    <div id="orientation-warning">
+        <h1>🔄</h1>
+        <p>Bitte drehe dein Gerät ins Querformat!</p>
+    </div>
+
+    <div id="app-container">
         
-        <div class="station station-1" onclick="flyToStation(0)">𗂂<div class="station-label">Mission 1:<br>Ordner & Hefter</div></div>
-        <div class="station station-2" onclick="flyToStation(1)">✍️<div class="station-label">Mission 2:<br>Stift & Marker</div></div>
-        <div class="station station-3" onclick="flyToStation(2)">🪄<div class="station-label">Mission 3:<br>Lasso-Magie</div></div>
-        <div class="station station-4" onclick="flyToStation(3)">📐<div class="station-label">Mission 4:<br>Formen & Audio</div></div>
-        <div class="station station-5" onclick="flyToStation(4)">📄<div class="station-label">Mission 5:<br>PDF Import</div></div>
-        <div class="station station-6" onclick="flyToStation(5)">☁️<div class="station-label">Mission 6:<br>Auto-Backup</div></div>
-        
-        <div id="rocket">🚀</div>
-        <button id="start-btn" class="btn">Tippe auf Station 1, um zu starten!</button>
+        <!-- Start Button im Zentrum (Löst Vollbild aus) -->
+        <div id="start-overlay">
+            <button class="btn" onclick="initRallye()">🚀 Rallye starten (Vollbild)</button>
+        </div>
+
+        <div class="map-container" id="map-bg">
+            <div class="header">🚀 Notability Entdecker-Rallye (90 Min)</div>
+            
+            <div class="station station-1" onclick="flyToStation(0)">𗂂<div class="station-label">Mission 1:<br>Ordner & Hefter</div></div>
+            <div class="station station-2" onclick="flyToStation(1)">✍️<div class="station-label">Mission 2:<br>Stift & Marker</div></div>
+            <div class="station station-3" onclick="flyToStation(2)">🪄<div class="station-label">Mission 3:<br>Lasso-Magie</div></div>
+            <div class="station station-4" onclick="flyToStation(3)">📐<div class="station-label">Mission 4:<br>Formen & Audio</div></div>
+            <div class="station station-5" onclick="flyToStation(4)">📄<div class="station-label">Mission 5:<br>PDF Import</div></div>
+            <div class="station station-6" onclick="flyToStation(5)">☁️<div class="station-label">Mission 6:<br>Auto-Backup</div></div>
+            
+            <div id="rocket">🚀</div>
+        </div>
     </div>
 
     <!-- Modales Fenster -->
     <div class="modal-overlay" id="mission-modal">
         <div class="modal-content">
             <h2 id="modal-title">Mission Titel</h2>
-            
             <div class="video-container">
                 <iframe id="youtube-player" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
             </div>
-
             <div class="task-list">
                 <strong>Deine Aufgaben für diese Station:</strong>
                 <ul id="modal-tasks"></ul>
             </div>
-
             <div class="button-group">
                 <button class="btn btn-secondary" onclick="toggleResult()" id="btn-result">👀 Lösung & Screenshot ansehen</button>
                 <button class="btn" onclick="closeModal()">➔ Zurück zur Karte</button>
             </div>
-
             <div class="result-box" id="result-box"></div>
         </div>
     </div>
@@ -158,45 +196,39 @@
 
         const missions = [
             {
-                top: '75%', left: '15%',
-                title: 'Mission 1: Der digitale Schulranzen (Ordner & Hefter)',
-                tasks: '<li>Bevor du schreibst, brauchst du Hefter! Tippe auf der Startseite links auf das <b>+</b>.</li><li>Erstelle einen <b>Trenner</b> und nenne ihn "Schuljahr 2026/27".</li><li>Erstelle darin drei <b>Themen</b> (Hefter): "Mathematik", "Deutsch" und "Englisch".</li><li>Bearbeite die Themen (lange gedrückt halten): Gib Mathe eine blaue, Deutsch eine rote und Englisch eine gelbe Farbe.</li><li>Erstelle IM Mathe-Ordner eine neue Notiz und nenne sie "Geometrie".</li>',
-                youtubeUrl: 'https://www.youtube-nocookie.com/embed/WnSlD-jdnms?start=15&rel=0', // Kurzer, passender Startpunkt
-                resultText: 'So muss deine Seitenleiste links in Notability aussehen. Alles ist sauber im aktuellen Schuljahr einsortiert.<br><svg class="fake-screenshot" viewBox="0 0 400 200"><rect width="150" height="200" fill="#f8f8f8" stroke="#ddd"/><text x="10" y="30" font-family="sans-serif" font-size="14" font-weight="bold">▾ Schuljahr 2026/27</text><circle cx="25" cy="55" r="6" fill="blue"/><text x="40" y="60" font-family="sans-serif" font-size="14">Mathematik</text><circle cx="25" cy="85" r="6" fill="red"/><text x="40" y="90" font-family="sans-serif" font-size="14">Deutsch</text><circle cx="25" cy="115" r="6" fill="#ffcc00"/><text x="40" y="120" font-family="sans-serif" font-size="14">Englisch</text><rect x="150" y="0" width="250" height="200" fill="#fff"/><text x="170" y="30" font-family="sans-serif" font-size="18" font-weight="bold">Geometrie</text></svg>'
+                top: '75%', left: '15%', title: 'Mission 1: Der digitale Schulranzen (Ordner & Hefter)',
+                tasks: '<li>Tippe auf der Startseite links auf das <b>+</b>.</li><li>Erstelle einen <b>Trenner</b> und nenne ihn "Schuljahr 2026/27".</li><li>Erstelle darin drei <b>Themen</b>: "Mathematik", "Deutsch" und "Englisch".</li><li>Bearbeite die Themen (lange gedrückt halten): Gib Mathe eine blaue, Deutsch eine rote und Englisch eine gelbe Farbe.</li><li>Erstelle IM Mathe-Ordner eine neue Notiz und nenne sie "Geometrie".</li>',
+                youtubeUrl: 'https://www.youtube-nocookie.com/embed/DChbnF1I3_E?start=53&rel=0', 
+                resultText: 'So muss deine Seitenleiste links in Notability aussehen. Alles ist sauber einsortiert.<br><svg class="fake-screenshot" viewBox="0 0 400 200"><rect width="150" height="200" fill="#f8f8f8" stroke="#ddd"/><text x="10" y="30" font-family="sans-serif" font-size="14" font-weight="bold">▾ Schuljahr 2026/27</text><circle cx="25" cy="55" r="6" fill="blue"/><text x="40" y="60" font-family="sans-serif" font-size="14">Mathematik</text><circle cx="25" cy="85" r="6" fill="red"/><text x="40" y="90" font-family="sans-serif" font-size="14">Deutsch</text><circle cx="25" cy="115" r="6" fill="#ffcc00"/><text x="40" y="120" font-family="sans-serif" font-size="14">Englisch</text><rect x="150" y="0" width="250" height="200" fill="#fff"/><text x="170" y="30" font-family="sans-serif" font-size="18" font-weight="bold">Geometrie</text></svg>'
             },
             {
-                top: '45%', left: '25%',
-                title: 'Mission 2: Stifte, Radierer & Marker',
-                tasks: '<li>Öffne deine "Geometrie"-Notiz. Ändere das Papier auf <b>Kariert</b> (über die 3 Punkte oben rechts).</li><li>Schreibe deinen Namen in deiner Lieblingsfarbe.</li><li>Wähle den <b>Textmarker</b> (gelb, dick) und markiere deinen Vornamen. Der Marker muss HINTER der Schrift liegen.</li><li>Zeichne einen Strich. Wähle den Radiergummi, tippe nochmal darauf und wähle <b>Ganzes Objekt</b>. Lösche den Strich mit nur einem Tippen.</li>',
+                top: '45%', left: '25%', title: 'Mission 2: Stifte, Radierer & Marker',
+                tasks: '<li>Öffne deine "Geometrie"-Notiz. Ändere das Papier auf <b>Kariert</b> (3 Punkte oben rechts).</li><li>Schreibe deinen Namen in deiner Lieblingsfarbe.</li><li>Wähle den <b>Textmarker</b> (gelb) und markiere deinen Vornamen (der Marker muss HINTER der Schrift liegen).</li><li>Zeichne einen Strich. Wähle den Radiergummi (Modus: <b>Ganzes Objekt</b>). Lösche den Strich mit nur einem Tippen.</li>',
                 youtubeUrl: 'https://www.youtube-nocookie.com/embed/WnSlD-jdnms?start=15&rel=0',
                 resultText: 'So sieht das Ergebnis aus: Karopapier, Schrift und der Marker, der den Text leuchtend hervorhebt, ohne ihn zu überdecken.<br><svg class="fake-screenshot" viewBox="0 0 400 200">'+svgHeader+svgGrid+'<rect x="70" y="80" width="120" height="30" fill="rgba(255, 235, 59, 0.5)" rx="5"/><text x="80" y="105" font-family="cursive" font-size="28" fill="blue">Max Mustermann</text></svg>'
             },
             {
-                top: '20%', left: '45%',
-                title: 'Mission 3: Lasso-Magie (Verschieben & Umfärben)',
+                top: '20%', left: '45%', title: 'Mission 3: Lasso-Magie (Verschieben & Umfärben)',
                 tasks: '<li>Zeichne einen großen roten Stern.</li><li>Wähle das gestrichelte <b>Lasso-Werkzeug</b> und kreise den Stern ein.</li><li>Verschiebe ihn in die Ecke und ziehe ihn mit zwei Fingern größer.</li><li>Tippe auf die gestrichelte Linie, wähle "Stil" und färbe den Stern grün ein!</li>',
                 youtubeUrl: 'https://www.youtube-nocookie.com/embed/dKLn_HA5KwA?start=355&end=450&rel=0',
                 resultText: 'Das Lasso-Menü (Stil) ist geöffnet, die gestrichelte Linie zeigt an, was markiert ist.<br><svg class="fake-screenshot" viewBox="0 0 400 200">'+svgHeader+svgGrid+'<path d="M100,150 l10,-30 l30,-5 l-25,-15 l10,-30 l-25,20 l-25,-20 l10,30 l-25,15 l30,5 Z" fill="none" stroke="green" stroke-width="4"/><rect x="65" y="60" width="90" height="110" fill="none" stroke="#007aff" stroke-width="2" stroke-dasharray="5,5"/><rect x="180" y="80" width="100" height="40" rx="8" fill="#333"/><text x="200" y="105" fill="white" font-family="sans-serif" font-size="14">Stil ändern</text></svg>'
             },
             {
-                top: '40%', left: '65%',
-                title: 'Mission 4: Formen zeichnen & Audio-Mitschrift',
-                tasks: '<li>Zeichne freihändig ein Dreieck, aber <b>hebe den Stift am Ende NICHT ab</b>. Beobachte, wie es schnurgerade wird.</li><li>Tippe oben auf das <b>Mikrofon</b>. Die Aufnahme startet.</li><li>Lies den Satz vor: "Ein Dreieck hat drei Ecken". Schreibe genau <i>währenddessen</i> das Wort "Dreieck" auf.</li><li>Stoppe die Aufnahme und spiele sie ab. Achte auf deine Schrift!</li>',
+                top: '40%', left: '65%', title: 'Mission 4: Formen zeichnen & Audio-Mitschrift',
+                tasks: '<li>Zeichne freihändig ein Dreieck, <b>hebe den Stift am Ende NICHT ab</b>. Beobachte, wie es schnurgerade wird.</li><li>Tippe oben auf das <b>Mikrofon</b>. Die Aufnahme startet.</li><li>Lies den Satz vor: "Ein Dreieck hat drei Ecken". Schreibe genau <i>währenddessen</i> das Wort "Dreieck" auf.</li><li>Stoppe die Aufnahme und spiele sie ab. Achte auf deine Schrift!</li>',
                 youtubeUrl: 'https://www.youtube-nocookie.com/embed/WnSlD-jdnms?start=120&rel=0',
-                resultText: 'Die unsaubere Zeichnung wurde automatisch begradigt. Oben läuft der Audioplayer synchron zur Handschrift.<br><svg class="fake-screenshot" viewBox="0 0 400 200">'+svgHeader+svgGrid+'<rect x="150" y="5" width="100" height="30" rx="15" fill="#f00"/><text x="180" y="25" fill="white" font-family="sans-serif" font-size="14">00:15 ▶</text><polygon points="200,60 120,160 280,160" fill="rgba(255,0,0,0.2)" stroke="red" stroke-width="4"/><text x="160" y="120" font-family="cursive" font-size="30" fill="#888">Drei<tspan fill="#000">eck</tspan></text></svg>'
+                resultText: 'Das Dreieck wurde automatisch begradigt. Oben läuft der Audioplayer synchron zur Handschrift.<br><svg class="fake-screenshot" viewBox="0 0 400 200">'+svgHeader+svgGrid+'<rect x="150" y="5" width="100" height="30" rx="15" fill="#f00"/><text x="180" y="25" fill="white" font-family="sans-serif" font-size="14">00:15 ▶</text><polygon points="200,60 120,160 280,160" fill="rgba(255,0,0,0.2)" stroke="red" stroke-width="4"/><text x="160" y="120" font-family="cursive" font-size="30" fill="#888">Drei<tspan fill="#000">eck</tspan></text></svg>'
             },
             {
-                top: '70%', left: '75%',
-                title: 'Mission 5: Arbeitsblätter (PDF) ausfüllen',
-                tasks: '<li>Suche in Safari nach einem PDF oder lade ein Arbeitsblatt aus IServ/Schulportal herunter.</li><li>Tippe auf das "Teilen"-Symbol (Kasten mit Pfeil) und wähle <b>In Notability öffnen</b>.</li><li>Importiere es als "Neue Notiz" und ordne es deinem Mathe-Ordner zu.</li><li>Erstelle ein Textfeld (T-Symbol) und tippe eine Antwort mit der Tastatur exakt auf die Linie des PDFs.</li>',
-                youtubeUrl: 'https://www.youtube-nocookie.com/embed/6JHIV4e9cj4?rel=0', // KGS Tarmstedt, echter Schulkontext
+                top: '70%', left: '75%', title: 'Mission 5: Arbeitsblätter (PDF) ausfüllen',
+                tasks: '<li>Suche in Safari nach einem PDF (oder lade ein Arbeitsblatt aus dem Schulportal).</li><li>Tippe auf das "Teilen"-Symbol und wähle <b>In Notability öffnen</b>.</li><li>Importiere es als "Neue Notiz" und ordne es deinem Mathe-Ordner zu.</li><li>Erstelle ein Textfeld (T-Symbol) und tippe eine Antwort mit der Tastatur exakt auf die Linie des PDFs.</li>',
+                youtubeUrl: 'https://www.youtube-nocookie.com/embed/6JHIV4e9cj4?rel=0',
                 resultText: 'Das Arbeitsblatt ist importiert und du hast per Tastatur genau auf die vorgegebenen Linien geschrieben.<br><svg class="fake-screenshot" viewBox="0 0 400 200">'+svgHeader+'<rect x="40" y="60" width="320" height="120" fill="white" stroke="#ccc" stroke-width="1"/><text x="60" y="90" font-family="sans-serif" font-size="16" font-weight="bold">Arbeitsblatt Mathematik</text><line x1="60" y1="130" x2="340" y2="130" stroke="#000" stroke-width="1"/><rect x="80" y="105" width="200" height="25" fill="rgba(0, 122, 255, 0.1)" stroke="#007aff" stroke-dasharray="2,2"/><text x="85" y="123" font-family="sans-serif" font-size="14" fill="#007aff">x = 14 (Tastatureingabe)</text></svg>'
             },
             {
-                top: '25%', left: '85%',
-                title: 'Mission 6: Sicherheit geht vor (Auto-Backup)',
-                tasks: '<li>Das Wichtigste zum Schluss: Gehe unten links in die <b>Einstellungen (Zahnrad)</b>.</li><li>Wähle <b>Auto-Backup</b> aus.</li><li>Verbinde euren Schulserver (z. B. WebDAV / IServ) oder eure Cloud. Melde dich an.</li><li><b>EXTREM WICHTIG:</b> Ändere ganz unten in den Backup-Einstellungen das Dateiformat von "Note" zu <b>PDF</b>. So kannst du deine Hefter auch am Schul-PC ansehen!</li>',
-                youtubeUrl: 'https://www.youtube-nocookie.com/embed/XKWo4QrbBiY?rel=0', // Kern Schule, nur 2 Minuten, Fokus Datensicherung
+                top: '25%', left: '85%', title: 'Mission 6: Sicherheit geht vor (Auto-Backup)',
+                tasks: '<li>Gehe unten links in die <b>Einstellungen (Zahnrad)</b> und wähle <b>Auto-Backup</b>.</li><li>Verbinde euren Schulserver (z. B. WebDAV / IServ) oder eure Cloud. Melde dich an.</li><li><b>EXTREM WICHTIG:</b> Ändere ganz unten das Dateiformat von "Note" zu <b>PDF</b>. So kannst du deine Hefter auch am Schul-PC ansehen!</li>',
+                youtubeUrl: 'https://www.youtube-nocookie.com/embed/XKWo4QrbBiY?rel=0',
                 resultText: 'Der blaue Haken ist bei eurem Schulservice gesetzt und als Format ist PDF eingestellt.<br><svg class="fake-screenshot" viewBox="0 0 400 200"><rect width="100%" height="100%" fill="#f0f0f5"/><rect x="100" y="20" width="280" height="160" fill="white" rx="10"/><text x="120" y="50" font-family="sans-serif" font-size="18" font-weight="bold">Auto-Backup</text><rect x="120" y="70" width="240" height="30" fill="#e5e5ea" rx="5"/><text x="130" y="90" font-family="sans-serif" font-size="14">✅ WebDAV / IServ / Cloud</text><text x="120" y="140" font-family="sans-serif" font-size="14" fill="#666">Dateiformat:</text><rect x="220" y="125" width="60" height="20" fill="#007aff" rx="4"/><text x="235" y="140" font-family="sans-serif" font-size="12" fill="white">PDF</text></svg>'
             }
         ];
@@ -208,9 +240,22 @@
         const resultBox = document.getElementById('result-box');
         const btnResult = document.getElementById('btn-result');
 
+        // Fordert den Vollbildmodus an und entfernt den Blur von der Karte
+        function initRallye() {
+            let elem = document.documentElement;
+            if (elem.requestFullscreen) { elem.requestFullscreen(); }
+            else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } // Safari iPad
+            else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); } // Edge/IE
+
+            document.getElementById('start-overlay').style.display = 'none';
+            document.getElementById('map-bg').style.filter = 'none';
+
+            // Mache Planeten erst jetzt anklickbar
+            document.querySelectorAll('.station').forEach(el => el.classList.add('active-clicks'));
+        }
+
         function flyToStation(index) {
             if (isFlying) return; 
-            document.getElementById('start-btn').style.display = 'none';
             isFlying = true;
             
             rocket.classList.add('flying');
